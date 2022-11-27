@@ -1,3 +1,22 @@
+import pandas as pd
+import os
+
+def format_data(data):
+
+    df = data.set_index(["date", "location"]).unstack()
+    df.columns = df.columns.swaplevel(0, 1)
+    df.sort_index(axis=1, level=0, inplace=True)
+    
+    return df
+
+def load_data(data_path, data_file) -> None:
+
+    data_path = os.path.abspath(data_path)
+    data = pd.read_csv(os.path.join(data_path, data_file), dtype={"tests_units": str})
+    
+    return format_data(data)
+
+
 def parse_locations(data, request):
 
     locations = set()

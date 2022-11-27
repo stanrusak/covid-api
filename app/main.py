@@ -1,20 +1,22 @@
 from fastapi import FastAPI, HTTPException
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.params import Body
 from pydantic import BaseModel
 import pandas as pd
 from typing import List
 from .functions import *
-import os
+from datetime import datetime as dt
 
-DATA_PATH = '../data/covid-19-data/public/data'
+#DATA_PATH = '../data/covid-19-data/public/data'
 FILE_NAME = 'owid-covid-data.csv'
+FILE_URL = "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
+UPDATED = dt.strptime("2022-11-25 00:00", "%Y-%m-%d %H:%M")
 
 app = FastAPI()
 
-from fastapi.middleware.cors import CORSMiddleware
-
 origins = [
-    "http://localhost:3000",
+    "https://localhost:3000",
 ]
 
 app.add_middleware(
@@ -25,19 +27,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def load_data() -> None:
+def fetch_data():
 
-    data_path = os.path.abspath(DATA_PATH)
-    data_file = FILE_NAME
-    data = pd.read_csv(os.path.join(data_path, data_file))
+    global UPDATED
 
-    df = data.set_index(["date", "location"]).unstack()
-    df.columns = df.columns.swaplevel(0, 1)
-    df.sort_index(axis=1, level=0, inplace=True)
+    print(f"{dt.now()}: Fetching latest data...", end="")
+    data = pd.read_csv(FILE_URL, dtype={"tests_units": str})
+    data.to_csv(FILE_NAME, index=False)
+    UPDATED = dt.now()
+    print("Done")
+
+    return format_data(data)
+
+def update():
+
+    global data
+    data = fetch_data()
+
+data =  fetch_data() #load_data("./", FILE_NAME)
+
+@app.on_event("startup")
+async def load_schedule_or_create_blank():
     
-    return df
+    try:
+        sched = BackgroundScheduler()
+        sched.add_job(update,'interval', seconds=60 * 60 * 12)
+        sched.start()   
+        print("Created Schedule")
+    except:
+        print("Unable to Create Schedule")
 
-data = load_data()
 
 class Request(BaseModel):
 
@@ -52,7 +71,7 @@ class Request(BaseModel):
 def root():
 
     return {
-        "info": "An API serving the global COVID-19 data collected by the good people of Our World in Data. Disclaimer: I am not affiliated with OWID.",
+        "info": "An API serving the global COVID-19 data collected by the good people of Our World in Data. See `/docs` for usage. Disclaimer: I am not affiliated with OWID.",
         "project url": "",
         "original data": "https://github.com/owid/covid-19-data/tree/master/public/data",
         "Our World in Data": "https://ourworldindata.org/coronavirus",
@@ -61,7 +80,8 @@ def root():
                 "period": f"{min(data.index)}-{max(data.index)}",
                 "days": len(data),
                 "locations": len(data.columns.get_level_values(0).unique()),
-                "columns": len(data.columns.get_level_values(1).unique())
+                "columns": len(data.columns.get_level_values(1).unique()),
+                "updated": str(UPDATED)
             }
             }
 
@@ -93,18 +113,18 @@ def get_location(location):
 
     return {location: get_location_data(location, data, columns, None, None)}
 
-@app.get("/countries")
-def get_countries():
-    """ 
-        Returns a list of locations present in the database.
-        Includes countries, select territories as well as aggregates
-        over continents and world as a whole. Same as query `locations`.
-    """
-    return get_locations()
+# @app.get("/countries")
+# def get_countries():
+#     """ 
+#         Returns a list of locations present in the database.
+#         Includes countries, select territories as well as aggregates
+#         over continents and world as a whole. Same as query `locations`.
+#     """
+#     return get_locations()
 
-@app.get("/countries/{location}")
-def get_country(location):
-    return get_location(location)
+# @app.get("/countries/{location}")
+# def get_country(location):
+#     return get_location(location)
 
 @app.get("/iso")
 def iso():
@@ -116,6 +136,13 @@ def iso():
 
 @app.post("/")
 def root(request: Request):
+    """ Run a detailed data query with JSON request. Accepted parameters:
+
+        - `location` - Location as a string or a list of locations. If not provided, all locations are returned.
+        - `columns` - A list of data columns. See the `/columns` endpoint for available columns. If not provided, all columns are returned.
+        - `start` - Starting date for the data in the format YYYY-MM-DD. If not provided, earliest point in the data is used.
+        - `end` - Ending date for the data in the format YYYY-MM-MM-MM. If not provided, latest point in the data is used.
+    """
 
     locations = parse_locations(data, request)
     
@@ -156,6 +183,7 @@ def latest():
     for location in locations:
 
         result[location] = data[location][columns].dropna(axis=0).apply(lambda x: x[x.notnull()].values[-1]).to_dict()
+        # result[location]["updated"] = data[location][columns].dropna(axis=0).apply(lambda x: x[x.notnull()].index[-1]).max()
     
     return result
     
