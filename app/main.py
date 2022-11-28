@@ -7,16 +7,19 @@ import pandas as pd
 from typing import List
 from .functions import *
 from datetime import datetime as dt
+import os
+import sys
 
 #DATA_PATH = '../data/covid-19-data/public/data'
-FILE_NAME = 'owid-covid-data.csv'
+FILE_NAME = 'owid-covid-data.json'
+DATA_DIR = "../"# os.path.dirname(os.path.dirname(os.path.realpath( __file__)))
 FILE_URL = "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
 UPDATED = dt.strptime("2022-11-25 00:00", "%Y-%m-%d %H:%M")
 
 app = FastAPI()
 
 origins = [
-    "https://localhost:3000",
+    "*",
 ]
 
 app.add_middleware(
@@ -32,9 +35,17 @@ def fetch_data():
     global UPDATED
 
     print(f"{dt.now()}: Fetching latest data...", end="")
-    data = pd.read_csv(FILE_URL, dtype={"tests_units": str})
-    data.to_csv(FILE_NAME, index=False)
+
+    try:
+        data = pd.read_csv(FILE_URL, dtype={"tests_units": str})
+        #data.to_csv(FILE_NAME, index=False)
+    except Exception as e:
+        print(e)
+        raise Exception("Data fetch failed")
+        #data = pd.read_csv(FILE_NAME)
+
     UPDATED = dt.now()
+
     print("Done")
 
     return format_data(data)
@@ -44,7 +55,10 @@ def update():
     global data
     data = fetch_data()
 
-data =  fetch_data() #load_data("./", FILE_NAME)
+data = fetch_data() #load_data(DATA_DIR, FILE_NAME)
+print(data.head(5))
+
+print(f"Version: {sys.version}")
 
 @app.on_event("startup")
 async def load_schedule_or_create_blank():
@@ -57,14 +71,11 @@ async def load_schedule_or_create_blank():
     except:
         print("Unable to Create Schedule")
 
-
 class Request(BaseModel):
 
-    location: str | List = None 
-    country: str | List = None
+    location: str | List[str] = None 
     start: str = None
     end: str = None
-    period: str = None
     columns: list = None
 
 @app.get("/")
@@ -95,7 +106,7 @@ def get_locations():
     """ 
         Returns a list of locations present in the database.
         Includes countries, select territories as well as aggregates
-        over continents and world as a whole. Same as query `countries`.
+        over continents and world as a whole.
     """
     return {"locations": data.columns.get_level_values(0).unique().to_list()}
 
@@ -112,19 +123,6 @@ def get_location(location):
     columns = data.columns.get_level_values(1).unique().to_list()
 
     return {location: get_location_data(location, data, columns, None, None)}
-
-# @app.get("/countries")
-# def get_countries():
-#     """ 
-#         Returns a list of locations present in the database.
-#         Includes countries, select territories as well as aggregates
-#         over continents and world as a whole. Same as query `locations`.
-#     """
-#     return get_locations()
-
-# @app.get("/countries/{location}")
-# def get_country(location):
-#     return get_location(location)
 
 @app.get("/iso")
 def iso():
@@ -186,15 +184,3 @@ def latest():
         # result[location]["updated"] = data[location][columns].dropna(axis=0).apply(lambda x: x[x.notnull()].index[-1]).max()
     
     return result
-    
-@app.get("/countries/{metric}/top/{num}")
-def rank(metric: str, num: int):
-    """ Returns top {num} countries ranked by total cases/deaths per million{metric}"""
-
-    if metric == "cases":
-        column = "total_cases_per_million"
-    elif metric == "deaths":
-        column = "total_deaths_per_million"
-    else:
-        raise HTTPException(status_code=404, detail=f"Invalid route {metric}. Valid routes are 'cases' and 'deaths'.")
-    

@@ -20,10 +20,6 @@ def load_data(data_path, data_file) -> None:
 def parse_locations(data, request):
 
     locations = set()
-    if request.country and isinstance(request.country, str):
-        locations.add(request.country)
-    elif request.country and isinstance(request.country, list):
-        locations = locations.union(set(request.country))
 
     if request.location and isinstance(request.location, str):
         locations.add(request.location)
@@ -40,8 +36,6 @@ def parse_locations(data, request):
 def parse_period(request):
 
     start, end = request.start, request.end
-    if request.period:
-        start, end = request.period.split(':')
     if request.start:
         start = request.start
     if request.end:
@@ -75,8 +69,8 @@ def validate_locations(data, locations):
     
     for location in locations:
 
-        if location in valid_locations:
-            result.append(location)
+        if location.title() in valid_locations:
+            result.append(location.title())
         else:
             return {"Error": f"Invalid location {location}"}
     
