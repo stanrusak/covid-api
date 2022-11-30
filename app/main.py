@@ -44,7 +44,7 @@ def fetch_data():
         raise Exception("Data fetch failed")
         #data = pd.read_csv(FILE_NAME)
 
-    UPDATED = dt.now()
+    UPDATED = dt.utcnow()
 
     print("Done")
 
@@ -80,10 +80,11 @@ class Request(BaseModel):
 
 @app.get("/")
 def root():
+    """ Info and metadata """
 
     return {
         "info": "An API serving the global COVID-19 data collected by the good people of Our World in Data. See `/docs` for usage. Disclaimer: I am not affiliated with OWID.",
-        "project url": "",
+        "project url": "https://github.com/stanrusak/covid-api",
         "original data": "https://github.com/owid/covid-19-data/tree/master/public/data",
         "Our World in Data": "https://ourworldindata.org/coronavirus",
         "metadata": 
@@ -92,7 +93,7 @@ def root():
                 "days": len(data),
                 "locations": len(data.columns.get_level_values(0).unique()),
                 "columns": len(data.columns.get_level_values(1).unique()),
-                "updated": str(UPDATED)
+                "updated": UPDATED.strftime("%Y-%m-%d %H:%M UTC")
             }
             }
 
