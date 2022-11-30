@@ -1,6 +1,6 @@
 # covid-api
 
-API servind COVID-19 data collated by the good folks at [Our World In Data](https://ourworldindata.org/coronavirus). Live version can be found at
+API serving COVID-19 data collated by the good folks at [Our World In Data](https://ourworldindata.org/coronavirus). Live version can be found at
 
 https://covid-api.up.railway.app/
 
