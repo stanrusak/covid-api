@@ -6,7 +6,7 @@ https://covid-api.up.railway.app/
 
 ## Endpoints
 
-Below is a brief documentation of the endpoints. An interactive documentation can be accessed at the `/docs`
+Below is a brief documentation of the endpoints. An interactive documentation can be accessed at [`/docs`](https://covid-api.up.railway.app//docs)
 
 ### Root endpoint `/`
 
@@ -18,9 +18,9 @@ Below is a brief documentation of the endpoints. An interactive documentation ca
   - `start` - Starting date for the data in the format YYYY-MM-DD. If not provided, earliest point in the data is used.
   - `end` - Ending date for the data in the format YYYY-MM-MM-MM. If not provided, latest point in the data is used.
 
-## Other endpoints
+### Other endpoints
 
-All other endpoings are accessed with a `GET` request.
+All other endpoints are accessed with a `GET` request.
 
 - `/docs`: interactive documentation
 - `/columns`: a list of all data columns
