@@ -16,7 +16,10 @@ DATA_DIR = "../"# os.path.dirname(os.path.dirname(os.path.realpath( __file__)))
 FILE_URL = "https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv?raw=true"
 UPDATED = dt.strptime("2022-11-25 00:00", "%Y-%m-%d %H:%M")
 
-app = FastAPI()
+app = FastAPI(
+    title="COVID19 API ",
+    description="An API serving the global COVID-19 data collected by the good people of Our World in Data. See `/docs` for usage. Disclaimer: I am not affiliated with OWID.",
+    version="0.1.0")
 
 origins = [
     "*",
@@ -56,7 +59,6 @@ def update():
     data = fetch_data()
 
 data = fetch_data() #load_data(DATA_DIR, FILE_NAME)
-print(data.head(5))
 
 print(f"Version: {sys.version}")
 
