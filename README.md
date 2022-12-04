@@ -6,7 +6,7 @@ https://covid-api.up.railway.app/
 
 ## Endpoints
 
-Below is a brief documentation of the endpoints. An interactive documentation can be accessed at [`/docs`](https://covid-api.up.railway.app//docs)
+Below is a brief documentation of the endpoints. An interactive documentation can be accessed at [`/docs`](https://covid-api.up.railway.app/docs)
 
 ### Root endpoint `/`
 
